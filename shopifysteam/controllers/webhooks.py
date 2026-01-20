@@ -80,11 +80,10 @@ class WebhookController(http.Controller):
                 'origin': data.get('name'),  # e.g. #9999
                 'client_order_ref': str(data.get('id')),  # Shopify Internal ID
                 'order_line': order_lines,
-                'date_order': order_date
+                'date_order': order_date,
             })
-            if data.get('financial_status') in ['paid', 'authorized']:
-                new_order.action_confirm()
-            return self._json_response({"status": OrderStatus.FAILED.value, "odoo_id": new_order.id}, 200)
+            new_order.action_confirm()
+            return self._json_response({"status": OrderStatus.SUCCESS.value, "odoo_id": new_order.id}, 200)
 
         except Exception as e:
             _logger.error("Shopify Sync Error: %s", str(e))
