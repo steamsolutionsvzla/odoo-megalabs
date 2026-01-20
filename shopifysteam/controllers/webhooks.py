@@ -83,10 +83,15 @@ class WebhookController(http.Controller):
                 'date_order': order_date,
             })
             new_order.action_confirm()
+            invoice = new_order._create_invoices(final=True)
+            if invoice:
+                invoice.action_post()
+                env.cr.commit()
             return self._json_response({"status": OrderStatus.SUCCESS.value, "odoo_id": new_order.id}, 200)
 
         except Exception as e:
             _logger.error("Shopify Sync Error: %s", str(e))
+            env.cr.rollback()
             return self._json_response({"status": OrderStatus.FAILED.value, "message": str(e)}, 500)
 
     def _get_or_create_partner(self, env, shopify_cust):
