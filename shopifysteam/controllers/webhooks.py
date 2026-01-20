@@ -133,6 +133,4 @@ class WebhookController(http.Controller):
         ).digest()
 
         computed_hmac = base64.b64encode(digest).decode()
-        _logger.info(
-            f"Secret: {shopify_secret}, digest: {digest}, computed_hmac: {computed_hmac}")
         return hmac.compare_digest(computed_hmac, hmac_header)
