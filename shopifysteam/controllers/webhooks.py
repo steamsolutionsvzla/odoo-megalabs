@@ -1,28 +1,60 @@
+import base64
+import hashlib
+import hmac
+import json
 import logging
-import pytz
-from odoo import http, fields
-from odoo.http import request
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict
+
+import pytz
+from odoo import fields, http
+from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
 
-class WebhookController(http.Controller):
+class OrderStatus(Enum):
+    FAILED = 'failed'
+    SUCCESS = 'success'
 
-    @http.route('/v1/webhooks/shopify/orders', type='json', auth='public', methods=['POST'], csrf=False)
+
+class WebhookController(http.Controller):
+    def _json_response(self, obj: Dict[str, Any], status: int):
+        return request.make_response(json.dumps(
+            obj), status=status)
+
+    @http.route('/v1/webhooks/shopify/orders', type='http', auth='public', methods=['POST'], csrf=False)
     def shopify_order_created(self, **kwargs):
-        data = request.get_json_data()
+        """Toma el objeto Order enviado por Shopify y lo procesa para convertirlo en una orden en Odoo.
+
+        params:
+        self: instancia misma del objeto
+        **kwargs:  cuerpo de la petición
+        """
+        raw_data = request.httprequest.data
+        hmac_header = request.httprequest.headers.get('X-Shopify-Hmac-Sha256')
+        if not self._verify_webhook(raw_data, hmac_header):
+            _logger.warning("Unauthorized Shopify webhook attempt detected.")
+            return self._json_response({'error': 'Unauthorized'}, status=401)
+        try:
+            data = json.loads(raw_data)
+        except (json.JSONDecodeError, TypeError):
+            _logger.error("Failed to decode JSON from Shopify webhook")
+            return self._json_response({'status': OrderStatus.FAILED.value, 'error': 'Invalid JSON'}, status=400)
+        if not data:
+            return self._json_response({'status': OrderStatus.FAILED.value, 'error  ': 'Empty request body'}, 400)
         env = request.env['res.users'].sudo().env
         if data.get('financial_status') == 'voided':
             _logger.info("Ignoring Shopify Order %s: Status is VOIDED",
                          data.get('name'))
-            return {"status": "ignored", "reason": "voided"}
+            return self._json_response({"status": OrderStatus.FAILED.value, "reason": "voided"}, 200)
         existing_order = env['sale.order'].search([
             ('client_order_ref', '=', str(data.get('id')))
         ], limit=1)
 
         if existing_order:
-            return {"status": "success", "message": "Order already exists", "odoo_id": existing_order.id}
+            return self._json_response({"status": OrderStatus.FAILED.value, "message": "Order already exists", "odoo_id": existing_order.id}, 200)
         try:
             shopify_customer = data.get('customer')
             partner_id = self._get_or_create_partner(env, shopify_customer)
@@ -52,11 +84,11 @@ class WebhookController(http.Controller):
             })
             if data.get('financial_status') in ['paid', 'authorized']:
                 new_order.action_confirm()
-            return {"status": "success", "odoo_id": new_order.id}
+            return self._json_response({"status": OrderStatus.FAILED.value, "odoo_id": new_order.id}, 200)
 
         except Exception as e:
             _logger.error("Shopify Sync Error: %s", str(e))
-            return {"status": "error", "message": str(e)}
+            return self._json_response({"status": OrderStatus.FAILED.value, "message": str(e)}, 500)
 
     def _get_or_create_partner(self, env, shopify_cust):
         partner = env['res.partner'].search([
@@ -87,3 +119,20 @@ class WebhookController(http.Controller):
                 'type': 'consu',
             })
         return product.id
+
+    def _verify_webhook(self, data, hmac_header):
+        """Standard Shopify HMAC verification logic"""
+        if not hmac_header:
+            return False
+        shopify_secret = self.env['ir.config_parameter'].sudo(
+        ).get_param('shopify.api_secret')
+        digest = hmac.new(
+            shopify_secret.encode('utf-8'),
+            data,
+            hashlib.sha256
+        ).digest()
+
+        computed_hmac = base64.b64encode(digest).decode()
+        _logger.info(
+            f"Secret: {shopify_secret}, digest: {digest}, computed_hmac: {computed_hmac}")
+        return hmac.compare_digest(computed_hmac, hmac_header)
