@@ -87,6 +87,7 @@ class WebhookController(http.Controller):
             if invoice:
                 invoice.action_post()
                 env.cr.commit()
+            self._send_new_order_email(new_order)
             return self._json_response({"status": OrderStatus.SUCCESS.value, "odoo_id": new_order.id}, 200)
 
         except Exception as e:
@@ -138,3 +139,19 @@ class WebhookController(http.Controller):
 
         computed_hmac = base64.b64encode(digest).decode()
         return hmac.compare_digest(computed_hmac, hmac_header)
+
+    def _send_new_order_email(self, sale_order):
+        """Function to send email with custom link"""
+        base_url = "http://example.com"  # Replace with actual base URL retrieval logic
+        custom_link = "%s/my/orders/%s" % (base_url, sale_order.id)
+
+        # Get template
+        template = self.env.ref('shopifysteam.new_sale_order_emailv1')
+
+        template.with_context(
+            custom_link=custom_link,
+            special_note='Su pedido será enviado en 24 horas',
+            tracking_number='TRK-%s' % sale_order.name
+        ).sudo().send_mail(sale_order.id, force_send=True)
+
+        return True
