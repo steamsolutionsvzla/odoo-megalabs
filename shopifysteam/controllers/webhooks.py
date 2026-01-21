@@ -144,14 +144,12 @@ class WebhookController(http.Controller):
         """Function to send email with custom link"""
         base_url = "http://example.com"  # Replace with actual base URL retrieval logic
         custom_link = "%s/my/orders/%s" % (base_url, sale_order.id)
-
-        # Get template
-        template = self.env.ref('shopifysteam.new_sale_order_emailv1')
-
+        template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
         template.with_context(
             custom_link=custom_link,
             special_note='Su pedido será enviado en 24 horas',
-            tracking_number='TRK-%s' % sale_order.name
+            tracking_number='TRK-%s' % sale_order.name,
+            default_email_from="megalabs@steamsolutions.tech"
         ).sudo().send_mail(sale_order.id, force_send=True)
 
         return True
