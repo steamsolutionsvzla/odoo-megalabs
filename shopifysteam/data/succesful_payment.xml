@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="succesful_payment" name="Payment Success Page">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+        <div
+            style="margin: 0; padding: 0; background-color: #ffffff; color: #000000; font-family: 'Poppins', sans-serif; font-weight: 400; line-height: 1.6; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center;">
+            <div class="container"
+                style="max-width: 600px; padding: 32px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+                <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                <h1 style="font-weight: 700; font-size: 28px; margin: 0 0 24px; color: #000000;">¡Pago
+                    recibido con éxito!</h1>
+
+                <p>Tu orden ha sido procesada y confirmada.</p>
+
+                <!-- Order Summary -->
+                <div
+                    style="background: #f9f9f9; padding: 20px; border-radius: 10px; margin: 24px 0; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                        <strong style="font-weight: 700;">Orden:</strong>
+                        <span>
+                            <t t-esc="object.name" />
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                        <strong style="font-weight: 700;">Fecha:</strong>
+                        <span>
+                            <t t-esc="formatted_date" />
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 8px 0;">
+                        <strong style="font-weight: 700;">Cliente:</strong>
+                        <span>
+                            <t t-esc="object.partner_id.name" />
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Order Lines -->
+                <table
+                    style="width: 100%; margin: 20px 0; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr>
+                            <th
+                                style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                Producto</th>
+                            <th
+                                style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                Cantidad</th>
+                            <th
+                                style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="order_lines" t-as="line">
+                            <tr>
+                                <td
+                                    style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                    <t t-esc="line['name']" />
+                                </td>
+                                <td
+                                    style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                    <t t-esc="line['qty']" />
+                                </td>
+                                <td
+                                    style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">
+                                    <t t-esc="line['subtotal']" />
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- Total -->
+                <div
+                    style="display: flex; justify-content: flex-end; font-size: 18px; margin: 16px 0;">
+                    <strong>Total: <t t-esc="formatted_total" /></strong>
+                </div>
+
+                <div style="margin-top: 24px; font-size: 14px; color: #666;">
+                    <p>Gracias por confiar en Steamsolutions.<br /> Este es un comprobante de pago
+                        generado automáticamente.</p>
+                    <button id="downloadPdfBtn"
+                        style="margin-top: 20px; padding: 10px 20px; background: #000; color: #fff; border: none; border-radius: 4px; cursor: pointer;">
+                        📄 Descargar Comprobante
+</button>
+                </div>
+            </div>
+            <script>
+                document.getElementById('downloadPdfBtn').addEventListener('click', function() {
+                const container = document.querySelector('.container'); // Your main content div
+
+                // Temporarily override styles for PDF
+                const originalWidth = container.style.width;
+                container.style.width = '800px'; // Standard PDF width
+
+                html2canvas(container, {
+                scale: 2, // Higher quality
+                useCORS: true,
+                backgroundColor: '#ffffff'
+                }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                const width = pdf.internal.pageSize.getWidth();
+                const height = (canvas.height * width) / canvas.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+                pdf.save('comprobante-pago-steamsolutions.pdf');
+
+                // Restore original width
+                container.style.width = originalWidth;
+                });
+                });
+</script>
+        </div>
+    </template>
+</odoo>

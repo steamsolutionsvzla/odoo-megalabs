@@ -3,25 +3,89 @@
     <data>
         <record id="new_sale_order_emailv1" model="mail.template">
             <field name="name">Orden Simple</field>
-            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="model_id" ref="sale.model_sale_order" />
             <field name="description">Envía un correo al cliente con el enlace para ver su orden.</field>
             <field name="subject">Tu Orden {{ object.name }} ha sido confirmada</field>
             <field name="email_from">megalabs@steamsolutions.tech</field>
             <field name="email_to">{{ object.partner_id.email }}</field>
             <field name="body_html" type="html">
-                <div style="margin: 0px; padding: 0px;">
-                    <p>👋🏻 Hola Sr(a) <t t-esc="object.partner_id.name"/>,</p>
-                    <p>✅ Tu orden <strong><t t-esc="object.name"/></strong> ha sido confirmada.</p>
-                    <p><strong>Total:</strong> <t t-esc="format_amount(object.amount_total, object.currency_id)"/></p>
-                    <p><strong>Fecha:</strong> <t t-esc="format_date(object.date_order)"/></p>
-                    <p>Accede a tu orden aquí: 
-                        <a t-att-href="ctx.get('custom_link', '#')">Pagar</a>
+                <div
+                    style="margin: 0; padding: 0; background-color: #ffffff; color: #000000; font-family: 'Poppins', sans-serif; font-weight: 400; font-style: normal; text-align: center; line-height: 1.5;">
+                    <p style="font-size: 16px; margin: 16px 0;">👋🏻 Hola Sr(a) <t
+                            t-esc="object.partner_id.name" />,</p>
+
+                    <p style="font-size: 16px; margin: 16px 0;"> ✅ Tu orden <strong
+                            style="font-weight: 700;">
+                            <t t-esc="object.name" />
+                        </strong> ha sido
+                        confirmada. </p>
+
+                    <!-- Order Lines Table -->
+                    <table
+                        style="width: 100%; max-width: 600px; margin: 20px auto; border-collapse: collapse; font-size: 14px;">
+                        <thead>
+                            <tr>
+                                <th
+                                    style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;">
+                                    Producto</th>
+                                <th
+                                    style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;">
+                                    Cantidad</th>
+                                <th
+                                    style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;">
+                                    Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="object.order_line" t-as="line">
+                                <tr>
+                                    <td
+                                        style="padding: 8px; text-align: center; border-bottom: 1px solid #eee;">
+                                        <t t-esc="line.product_id.name" />
+                                    </td>
+                                    <td
+                                        style="padding: 8px; text-align: center; border-bottom: 1px solid #eee;">
+                                        <t t-esc="line.product_uom_qty" />
+                                    </td>
+                                    <td
+                                        style="padding: 8px; text-align: center; border-bottom: 1px solid #eee;">
+                                        <t
+                                            t-esc="format_amount(line.price_subtotal, object.currency_id)" />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+
+                    <p style="font-size: 16px; margin: 12px 0;">
+                        <strong style="font-weight: 700;">Total:</strong>
+                        <t t-esc="format_amount(object.amount_total, object.currency_id)" />
                     </p>
-                    <p>⚠️ No responda a este mensaje. Este correo es generado automáticamente.</p>
-                    <br/><br/>
-                    <t t-esc="object.company_id.name"/>.
-                    <br/><br/>
-                    <p>Gracias,<br/>--<br/>El equipo de Steamsolutions</p>
+
+                    <p style="font-size: 16px; margin: 12px 0;">
+                        <strong style="font-weight: 700;">Fecha:</strong>
+                        <t t-esc="format_date(object.date_order)" />
+                    </p>
+
+                    <p style="font-size: 16px; margin: 20px 0;"> Accede a tu orden aquí: <a
+                            t-att-href="ctx.get('custom_link', '#')"
+                            style="color: #000000; text-decoration: underline; font-weight: 600;">
+                        Pagar</a>
+                    </p>
+
+                    <p style="font-size: 14px; color: #666666; margin: 24px 0 8px;">
+                        ⚠️ No responda a este mensaje. Este correo es generado automáticamente.
+                    </p>
+
+                    <br />
+                    <br />
+                    <!-- <p style="font-size: 14px; margin: 8px 0; color: #000000;">
+                        <t t-esc="object.company_id.name" />. </p> -->
+                    <br />
+                    <br />
+
+                    <p style="font-size: 16px; margin: 16px 0;"> Gracias,<br /> --<br /> El equipo
+                        de Megalabs </p>
                 </div>
             </field>
         </record>

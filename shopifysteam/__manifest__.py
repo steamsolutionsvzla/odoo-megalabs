@@ -13,5 +13,6 @@
     "license": "OPL-1",
     'data': [
         'data/new_sale_order_emailv1.xml',
+        'data/succesful_payment.xml',
     ],
 }

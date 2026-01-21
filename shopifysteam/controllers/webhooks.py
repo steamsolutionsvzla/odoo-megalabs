@@ -10,6 +10,7 @@ from typing import Any, Dict
 import pytz
 from odoo import fields, http
 from odoo.http import request
+from odoo.tools import format_amount, format_date
 
 _logger = logging.getLogger(__name__)
 
@@ -23,6 +24,24 @@ class WebhookController(http.Controller):
     def _json_response(self, obj: Dict[str, Any], status: int):
         return request.make_response(json.dumps(
             obj), status=status)
+
+    @http.route('/payment/success/<int:order_id>', type='http', auth='public')
+    def payment_success(self, order_id):
+        order = request.env['sale.order'].sudo().browse(order_id)
+        if not order.exists():
+            return request.not_found()
+        formatted_date = format_date(request.env, order.date_order)
+        formatted_total = format_amount(
+            request.env, order.amount_total, order.currency_id)
+        order_lines = [{
+            'name': line.product_id.name,
+            'qty': line.product_uom_qty,
+            'subtotal': format_amount(request.env, line.price_subtotal, order.currency_id)
+        } for line in order.order_line]
+        return request.render('shopifysteam.succesful_payment', {'object': order,
+                                                                 'formatted_date': formatted_date,
+                                                                 'formatted_total': formatted_total,
+                                                                 'order_lines': order_lines, })
 
     @http.route('/v1/webhooks/shopify/orders', type='http', auth='public', methods=['POST'], csrf=False)
     def shopify_order_created(self, **kwargs):
@@ -142,8 +161,9 @@ class WebhookController(http.Controller):
 
     def _send_new_order_email(self, sale_order):
         """Function to send email with custom link"""
-        base_url = "http://example.com"  # Replace with actual base URL retrieval logic
-        custom_link = "%s/my/orders/%s" % (base_url, sale_order.id)
+        base_url = self.env['ir.config_parameter'].sudo(
+        ).get_param('web.base.url')
+        custom_link = "%s/payment/success/%s" % (base_url, sale_order.id)
         template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
         template.with_context(
             custom_link=custom_link,
