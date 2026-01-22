@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 import pytz
 from odoo import fields, http
+from odoo.exceptions import UserError
 from odoo.http import request
 from odoo.tools import format_amount, format_date
 
@@ -94,19 +95,39 @@ class WebhookController(http.Controller):
             else:
                 dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 order_date = dt.astimezone(pytz.utc).replace(tzinfo=None)
+
             new_order = env['sale.order'].create({
                 'partner_id': partner_id,
                 'origin': data.get('name'),  # e.g. #9999
                 'client_order_ref': str(data.get('id')),  # Shopify Internal ID
                 'order_line': order_lines,
                 'date_order': order_date,
+                'company_id': env.company.id,
             })
+            merchant_id = new_order.company_id.mercantil_merchant_id
+            if not merchant_id:
+                raise UserError(
+                    "Mercantil Merchant ID not configured for company %s" % new_order.company_id.name)
             new_order.action_confirm()
             invoice = new_order._create_invoices(final=True)
+            base_url = self.env['ir.config_parameter'].sudo(
+            ).get_param('web.base.url')
             if invoice:
                 invoice.action_post()
                 env.cr.commit()
-            self._send_new_order_email(new_order)
+            mercantil_payment = env['sale.order.pago.mercantil'].create({
+                'order_id': new_order.id,
+                'merchant_id': new_order.company_id.mercantil_merchant_id,
+                'return_url': f"{base_url}/payment/success/{new_order.id}",
+                'invoice_number': new_order.client_order_ref or new_order.name,
+                'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                'contract_number': new_order.client_order_ref or new_order.name,
+                'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+            })
+            mercantil_payment = env['sale.order.pago.mercantil'].search(
+                [('order_id', '=', new_order.id)], limit=1)
+            payment_link = mercantil_payment.generate_link_payment()
+            self._send_new_order_email(new_order, payment_link)
             return self._json_response({"status": OrderStatus.SUCCESS.value, "odoo_id": new_order.id}, 200)
 
         except Exception as e:
@@ -159,11 +180,8 @@ class WebhookController(http.Controller):
         computed_hmac = base64.b64encode(digest).decode()
         return hmac.compare_digest(computed_hmac, hmac_header)
 
-    def _send_new_order_email(self, sale_order):
+    def _send_new_order_email(self, sale_order, custom_link):
         """Function to send email with custom link"""
-        base_url = self.env['ir.config_parameter'].sudo(
-        ).get_param('web.base.url')
-        custom_link = "%s/payment/success/%s" % (base_url, sale_order.id)
         template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
         template.with_context(
             custom_link=custom_link,

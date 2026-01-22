@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pago_mercantil_user,pago_mercantil.user,model_sale_order_pago_mercantil,sales_team.group_sale_salesman,1,0,0,0
+access_pago_mercantil_manager,pago_mercantil.manager,model_sale_order_pago_mercantil,sales_team.group_sale_manager,1,1,1,1
