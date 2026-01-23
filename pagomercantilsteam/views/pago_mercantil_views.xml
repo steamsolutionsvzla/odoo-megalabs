@@ -22,6 +22,7 @@
                 <field name="customer_name" />
                 <field name="invoice_number" />
                 <field name="trx_type" />
+                <field name="currency" />
             </list>
         </field>
     </record>
@@ -36,6 +37,9 @@
                         <field name="merchant_id" />
                         <field name="amount" />
                         <field name="customer_name" />
+                        <field name="trx_type" />
+                        <field name="currency" />
+                        <field name="payment_link" widget="url" />
                     </group>
                     <group string="Invoice">
                         <field name="invoice_number" />

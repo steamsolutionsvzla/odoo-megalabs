@@ -23,8 +23,8 @@ class PagoMercantil(models.Model):
         string='Merchant ID', default='', required=True)
     return_url = fields.Char(string='Return URL')
     trx_type = fields.Selection([
-        ('compra', 'Compra'),
-        ('venta', 'Venta')
+        ('compra', 'compra'),
+        ('venta', 'compra')
     ], string='Transaction Type', default='compra')
     currency = fields.Char(string='Currency', default='ves', required=True)
     payment_concepts = fields.Char(
@@ -41,6 +41,20 @@ class PagoMercantil(models.Model):
 
     currency_id = fields.Many2one(
         'res.currency', related='order_id.currency_id', required=True)
+    payment_link = fields.Char(
+        string="Payment Link", compute="_compute_payment_link")
+
+    @api.depends(
+        'amount', 'customer_name', 'merchant_id', 'invoice_number',
+        'invoice_creation_date', 'contract_number', 'contract_date',
+        'trx_type', 'currency', 'payment_concepts', 'return_url'
+    )
+    def _compute_payment_link(self):
+        for record in self:
+            try:
+                record.payment_link = record.generate_link_payment()
+            except Exception:
+                record.payment_link = ''
 
     def generate_link_payment(self):
         mercantil_payment_url = self._get_config_key('mercantil_payment_url')

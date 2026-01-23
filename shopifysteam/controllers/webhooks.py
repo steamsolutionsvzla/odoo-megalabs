@@ -77,7 +77,8 @@ class WebhookController(http.Controller):
             return self._json_response({"status": OrderStatus.FAILED.value, "message": "Order already exists", "odoo_id": existing_order.id}, 200)
         try:
             shopify_customer = data.get('customer')
-            partner_id = self._get_or_create_partner(env, shopify_customer)
+            partner_id = self._get_or_create_partner(
+                env, shopify_customer, data)
             order_lines = []
             for item in data.get('line_items', []):
                 product_id = self._get_or_create_product(env, item)
@@ -121,8 +122,9 @@ class WebhookController(http.Controller):
                 'return_url': f"{base_url}/payment/success/{new_order.id}",
                 'invoice_number': new_order.client_order_ref or new_order.name,
                 'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
-                'contract_number': new_order.client_order_ref or new_order.name,
+                'contract_number': new_order.id,
                 'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                'trx_type': 'compra'
             })
             mercantil_payment = env['sale.order.pago.mercantil'].search(
                 [('order_id', '=', new_order.id)], limit=1)
@@ -135,7 +137,11 @@ class WebhookController(http.Controller):
             env.cr.rollback()
             return self._json_response({"status": OrderStatus.FAILED.value, "message": str(e)}, 500)
 
-    def _get_or_create_partner(self, env, shopify_cust):
+    def _get_or_create_partner(self, env, shopify_cust, request):
+        data = request.get("shipping_address")
+        phone = data.get("phone") if data else shopify_cust.get(
+            'billing_address', {}).get('phone')
+
         partner = env['res.partner'].search([
             '|',
             ('email', '=', shopify_cust.get('email')),
@@ -144,12 +150,31 @@ class WebhookController(http.Controller):
 
         if not partner:
             partner = env['res.partner'].create({
-                'name': f"{shopify_cust.get('first_name', '')} {shopify_cust.get('last_name', '')}",
+                'name': f"{shopify_cust.get('first_name', '')} {shopify_cust.get('last_name', '')}".strip(),
                 'email': shopify_cust.get('email'),
-                'phone': shopify_cust.get('phone'),
-                # Using 'ref' to store Shopify ID
+                'phone': phone,
                 'ref': str(shopify_cust.get('id')),
             })
+            billing = request.get('billing_address', {})
+            if billing:
+                country = env['res.country'].search(
+                    [('code', '=', billing.get('country_code'))], limit=1)
+                state = env['res.country.state'].search([
+                    ('name', '=', billing.get('province')),
+                    ('country_id', '=', country.id)
+                ], limit=1) if country else None
+
+                partner.write({
+                    'street': billing.get('address1'),
+                    'street2': billing.get('address2'),  # don't hardcode None
+                    'city': billing.get('city'),
+                    'zip': billing.get('zip'),
+                    'state_id': state.id if state else False,
+                    'country_id': country.id if country else False,
+                    # optional: preserve billing phone
+                    'phone': billing.get('phone') or phone,
+                })
+
         return partner.id
 
     def _get_or_create_product(self, env, item):
