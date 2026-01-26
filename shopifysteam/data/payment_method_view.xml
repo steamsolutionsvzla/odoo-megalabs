@@ -1,0 +1,13 @@
+<odoo>
+    <record id="action_payment_method" model="ir.actions.act_window">
+        <field name="name">Payment Methods</field>
+        <field name="res_model">sale.payment.method</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_payment_method"
+        name="Payment Methods"
+        parent="sale.menu_sale_config"
+        action="action_payment_method"
+        sequence="50" />
+</odoo>

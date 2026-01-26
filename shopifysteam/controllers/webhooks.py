@@ -61,9 +61,9 @@ class WebhookController(http.Controller):
             data = json.loads(raw_data)
         except (json.JSONDecodeError, TypeError):
             _logger.error("Failed to decode JSON from Shopify webhook")
-            return self._json_response({'status': OrderStatus.FAILED.value, 'error': 'Invalid JSON'}, status=400)
+            return self._json_response({'status': OrderStatus.FAILED.value, 'error': 'Invalid JSON'}, status=200)
         if not data:
-            return self._json_response({'status': OrderStatus.FAILED.value, 'error  ': 'Empty request body'}, 400)
+            return self._json_response({'status': OrderStatus.FAILED.value, 'error  ': 'Empty request body'}, 200)
         env = request.env['res.users'].sudo().env
         if data.get('financial_status') == 'voided':
             _logger.info("Ignoring Shopify Order %s: Status is VOIDED",
@@ -119,13 +119,15 @@ class WebhookController(http.Controller):
             mercantil_payment = env['sale.order.pago.mercantil'].create({
                 'order_id': new_order.id,
                 'merchant_id': new_order.company_id.mercantil_merchant_id,
-                'return_url': f"{base_url}/payment/success/{new_order.id}",
+                'return_url': f"steamsolutions.tech",
                 'invoice_number': new_order.client_order_ref or new_order.name,
                 'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                'invoice_cancelled_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
                 'contract_number': new_order.id,
                 'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
                 'trx_type': 'compra'
             })
+            _logger.info(f"{mercantil_payment._build_transaction_data()}")
             mercantil_payment = env['sale.order.pago.mercantil'].search(
                 [('order_id', '=', new_order.id)], limit=1)
             payment_link = mercantil_payment.generate_link_payment()
