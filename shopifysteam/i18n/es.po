@@ -1,0 +1,272 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* shopifysteam
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0-20251121\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-26 22:09+0000\n"
+"PO-Revision-Date: 2026-01-26 18:11-0400\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.8\n"
+
+#. module: shopifysteam
+#: model:mail.template,body_html:shopifysteam.new_sale_order_emailv1
+msgid ""
+"<div style=\"margin: 0; padding: 0; background-color: #ffffff; color: #000000; font-family: 'Poppins', sans-serif; font-weight: 400; font-style: normal; text-align: center; line-height: 1.5;\">\n"
+"                    <p style=\"font-size: 16px; margin: 16px 0;\">👋🏻 Hola Sr(a) <t t-esc=\"object.partner_id.name\"/>,</p>\n"
+"\n"
+"                    <p style=\"font-size: 16px; margin: 16px 0;\"> ✅ Tu orden <strong style=\"font-weight: 700;\">\n"
+"                            <t t-esc=\"object.name\"/>\n"
+"                        </strong> ha sido\n"
+"                        confirmada. </p>\n"
+"\n"
+"                    <!-- Order Lines Table -->\n"
+"                    <table style=\"width: 100%; max-width: 600px; margin: 20px auto; border-collapse: collapse; font-size: 14px;\">\n"
+"                        <thead>\n"
+"                            <tr>\n"
+"                                <th style=\"padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;\">\n"
+"                                    Producto</th>\n"
+"                                <th style=\"padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;\">\n"
+"                                    Cantidad</th>\n"
+"                                <th style=\"padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-weight: 600;\">\n"
+"                                    Precio</th>\n"
+"                            </tr>\n"
+"                        </thead>\n"
+"                        <tbody>\n"
+"                            <t t-foreach=\"object.order_line\" t-as=\"line\">\n"
+"                                <tr>\n"
+"                                    <td style=\"padding: 8px; text-align: center; border-bottom: 1px solid #eee;\">\n"
+"                                        <t t-esc=\"line.product_id.name\"/>\n"
+"                                    </td>\n"
+"                                    <td style=\"padding: 8px; text-align: center; border-bottom: 1px solid #eee;\">\n"
+"                                        <t t-esc=\"line.product_uom_qty\"/>\n"
+"                                    </td>\n"
+"                                    <td style=\"padding: 8px; text-align: center; border-bottom: 1px solid #eee;\">\n"
+"                                        <t t-esc=\"format_amount(line.price_subtotal, object.currency_id)\"/>\n"
+"                                    </td>\n"
+"                                </tr>\n"
+"                            </t>\n"
+"                        </tbody>\n"
+"                    </table>\n"
+"\n"
+"                    <p style=\"font-size: 16px; margin: 12px 0;\">\n"
+"                        <strong style=\"font-weight: 700;\">Total:</strong>\n"
+"                        <t t-esc=\"format_amount(object.amount_total, object.currency_id)\"/>\n"
+"                    </p>\n"
+"\n"
+"                    <p style=\"font-size: 16px; margin: 12px 0;\">\n"
+"                        <strong style=\"font-weight: 700;\">Fecha:</strong>\n"
+"                        <t t-esc=\"format_date(object.date_order)\"/>\n"
+"                    </p>\n"
+"\n"
+"                    <p style=\"font-size: 16px; margin: 20px 0;\"> Accede a tu orden aquí: <a t-att-href=\"ctx.get('custom_link', '#')\" style=\"color: #000000; text-decoration: underline; font-weight: 600;\">\n"
+"                        Pagar</a>\n"
+"                    </p>\n"
+"\n"
+"                    <p style=\"font-size: 14px; color: #666666; margin: 24px 0 8px;\">\n"
+"                        ⚠️ No responda a este mensaje. Este correo es generado automáticamente.\n"
+"                    </p>\n"
+"\n"
+"                    <br/>\n"
+"                    <br/>\n"
+"                    <!-- <p style=\"font-size: 14px; margin: 8px 0; color: #000000;\">\n"
+"                        <t t-esc=\"object.company_id.name\" />. </p> -->\n"
+"                    <br/>\n"
+"                    <br/>\n"
+"\n"
+"                    <p style=\"font-size: 16px; margin: 16px 0;\"> Gracias,<br/> --<br/> El equipo\n"
+"                        de Megalabs </p>\n"
+"                </div>\n"
+"            "
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "<strong style=\"font-weight: 700;\">Cliente:</strong>"
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "<strong style=\"font-weight: 700;\">Fecha:</strong>"
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "<strong style=\"font-weight: 700;\">Orden:</strong>"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__active
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__active
+msgid "Active"
+msgstr "Activo"
+
+#. module: shopifysteam
+#: model:sale.payment.method,name:shopifysteam.pm_bank_transfer
+msgid "Bank Transfer"
+msgstr "Transferencia Bancaria"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "Cantidad"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__create_uid
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__create_date
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model,name:shopifysteam.model_sale_delivery_method
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_order__delivery_method_id
+msgid "Delivery Method"
+msgstr "Método de Envío"
+
+#. module: shopifysteam
+#: model:ir.actions.act_window,name:shopifysteam.action_delivery_method
+#: model:ir.ui.menu,name:shopifysteam.menu_delivery_method
+msgid "Delivery Methods"
+msgstr "Métodos de Envíos"
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__display_name
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_order__display_name
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__display_name
+msgid "Display Name"
+msgstr "Nombre para mostrar"
+
+#. module: shopifysteam
+#: model:mail.template,description:shopifysteam.new_sale_order_emailv1
+msgid "Envía un correo al cliente con el enlace para ver su orden."
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid ""
+"Gracias por confiar en Steamsolutions.<br/> Este es un comprobante de pago\n"
+"                        generado automáticamente."
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__id
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_order__id
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__id
+msgid "ID"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__write_uid
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__write_date
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: shopifysteam
+#: model:sale.payment.method,name:shopifysteam.pm_pago_movil
+msgid "Mobile Payment"
+msgstr "Pago Móvil"
+
+#. module: shopifysteam
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__name
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: shopifysteam
+#: model:mail.template,name:shopifysteam.new_sale_order_emailv1
+msgid "Orden Simple"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model,name:shopifysteam.model_sale_payment_method
+#: model:ir.model.fields,field_description:shopifysteam.field_sale_order__payment_method_id
+msgid "Payment Method"
+msgstr "Método de Pago"
+
+#. module: shopifysteam
+#: model:ir.actions.act_window,name:shopifysteam.action_payment_method
+#: model:ir.ui.menu,name:shopifysteam.menu_payment_method
+msgid "Payment Methods"
+msgstr "Métodos de Pago"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "Producto"
+msgstr ""
+
+#. module: shopifysteam
+#: model:ir.model,name:shopifysteam.model_sale_order
+msgid "Sales Order"
+msgstr "Pedido de venta"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.view_sale_order_form_inherit
+msgid "Select delivery method..."
+msgstr "Seleccionar método de envío..."
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.view_sale_order_form_inherit
+msgid "Select payment method..."
+msgstr "Seleccionar método de pago..."
+
+#. module: shopifysteam
+#: model:sale.delivery.method,name:shopifysteam.dm_standard
+msgid "Standard"
+msgstr "Estándar"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "Subtotal"
+msgstr "Subtotal"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "Total:"
+msgstr ""
+
+#. module: shopifysteam
+#: model:mail.template,subject:shopifysteam.new_sale_order_emailv1
+msgid "Tu Orden {{ object.name }} ha sido confirmada"
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "Tu orden ha sido procesada y confirmada."
+msgstr ""
+
+#. module: shopifysteam
+#: model:sale.payment.method,name:shopifysteam.pm_zelle
+msgid "Zelle"
+msgstr "Zelle"
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid ""
+"¡Pago\n"
+"                    recibido con éxito!"
+msgstr ""
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
+msgid "📄 Descargar Comprobante"
+msgstr ""

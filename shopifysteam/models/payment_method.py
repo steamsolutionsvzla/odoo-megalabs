@@ -4,5 +4,5 @@ class PaymentMethod(models.Model):
     _name = 'sale.payment.method'
     _description = 'Payment Method'
 
-    name = fields.Char('Name', required=True)
+    name = fields.Char('Name', required=True, translate=True)
     active = fields.Boolean(default=True)

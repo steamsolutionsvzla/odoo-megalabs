@@ -1,9 +1,9 @@
-<odoo noupdate="1">
+<odoo>
     <record id="pm_bank_transfer" model="sale.payment.method">
         <field name="name">Bank Transfer</field>
     </record>
     <record id="pm_pago_movil" model="sale.payment.method">
-        <field name="name">Pago Móvil</field>
+        <field name="name">Mobile Payment</field>
     </record>
     <record id="pm_zelle" model="sale.payment.method">
         <field name="name">Zelle</field>

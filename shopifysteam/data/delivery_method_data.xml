@@ -1,4 +1,4 @@
-<odoo noupdate="1">
+<odoo>
     <record id="dm_standard" model="sale.delivery.method">
         <field name="name">Standard</field>
     </record>

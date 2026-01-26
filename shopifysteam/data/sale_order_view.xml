@@ -8,8 +8,11 @@
             <xpath expr="//field[@name='client_order_ref']" position="after">
                 <field name="payment_method_id" placeholder="Select payment method..." />
             </xpath>
-            <xpath expr="//field[@name='fiscal_position_id']" position="after">
+            <xpath expr="//field[@name='client_order_ref']" position="after">
                 <field name="delivery_method_id" placeholder="Select delivery method..." />
+            </xpath>
+            <xpath expr="//field[@name='preferred_payment_method_line_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
         </field>
     </record>
