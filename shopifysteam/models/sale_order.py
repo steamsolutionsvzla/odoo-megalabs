@@ -7,3 +7,7 @@ class SaleOrder(models.Model):
         'sale.payment.method',
         string='Payment Method'
     )
+    delivery_method_id = fields.Many2one(
+        'sale.delivery.method',
+        string='Delivery Method'
+    )

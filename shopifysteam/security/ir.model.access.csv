@@ -1,3 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sale_payment_method_user,access.sale.payment.method.user,model_sale_payment_method,sales_team.group_sale_manager,1,1,1,1
 access_sale_payment_method_reader,access.sale.payment.method.reader,model_sale_payment_method,sales_team.group_sale_salesman,1,0,0,0
+access_sale_delivery_method_user,access.sale.delivery.method.user,model_sale_delivery_method,sales_team.group_sale_manager,1,1,1,1
+access_sale_delivery_method_reader,access.sale.delivery.method.reader,model_sale_delivery_method,sales_team.group_sale_salesman,1,0,0,0

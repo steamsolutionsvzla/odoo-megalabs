@@ -1,0 +1,13 @@
+<odoo>
+    <record id="action_delivery_method" model="ir.actions.act_window">
+        <field name="name">Delivery Methods</field>
+        <field name="res_model">sale.delivery.method</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_delivery_method"
+        name="Delivery Methods"
+        parent="sale.menu_sale_config"
+        action="action_delivery_method"
+        sequence="50" />
+</odoo>

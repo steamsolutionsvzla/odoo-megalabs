@@ -15,6 +15,8 @@
         'data/new_sale_order_emailv1.xml',
         'data/succesful_payment.xml',
         'data/sale_order_view.xml',
+        'data/delivery_method_view.xml',
+        'data/delivery_method_data.xml',
         'data/payment_method_view.xml',
         'data/payment_method_data.xml',
         'security/ir.model.access.csv', 
