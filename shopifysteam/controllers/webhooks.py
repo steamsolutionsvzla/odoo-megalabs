@@ -26,6 +26,16 @@ class WebhookController(http.Controller):
         return request.make_response(json.dumps(
             obj), status=status)
 
+    @http.route('/v1/webhooks/mercantil/payment/confirmation', type='http', auth='public', csrf=False)
+    def mercantil_confirm_payment(self, **kwargs):
+        raw_data = request.httprequest.data
+        try:
+            data = json.loads(raw_data)
+        except (json.JSONDecodeError, TypeError):
+            _logger.error("Failed to decode JSON from Shopify webhook")
+        _logger.info(data)
+        return self._json_response({"message": "OK"}, 200)
+
     @http.route('/payment/success/<int:order_id>', type='http', auth='public')
     def payment_success(self, order_id):
         order = request.env['sale.order'].sudo().browse(order_id)
