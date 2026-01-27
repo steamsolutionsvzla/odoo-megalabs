@@ -12,6 +12,7 @@
     "auto_install": False,
     "license": "OPL-1",
     'data': [
+        'data/payment_processing_page.xml',
         'data/new_sale_order_emailv1.xml',
         'data/succesful_payment.xml',
         'data/sale_order_view.xml',

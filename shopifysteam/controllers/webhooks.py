@@ -26,6 +26,10 @@ class WebhookController(http.Controller):
         return request.make_response(json.dumps(
             obj), status=status)
 
+    @http.route('/payment/processing', auth='public', website=True)
+    def payment_processing(self, **kwargs):
+        return request.render('shopifysteam.payment_processing_page')
+
     @http.route('/v1/webhooks/mercantil/payment/confirmation', type='http', auth='public', csrf=False)
     def mercantil_confirm_payment(self, **kwargs):
         raw_data = request.httprequest.data

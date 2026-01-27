@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 19.0-20251121\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-26 22:09+0000\n"
-"PO-Revision-Date: 2026-01-26 18:11-0400\n"
+"POT-Creation-Date: 2026-01-27 18:56+0000\n"
+"PO-Revision-Date: 2026-01-27 14:57-0400\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es\n"
@@ -123,13 +123,13 @@ msgstr ""
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__create_uid
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__create_uid
 msgid "Created by"
-msgstr ""
+msgstr "Creado por"
 
 #. module: shopifysteam
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__create_date
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__create_date
 msgid "Created on"
-msgstr ""
+msgstr "Creado el"
 
 #. module: shopifysteam
 #: model:ir.model,name:shopifysteam.model_sale_delivery_method
@@ -167,19 +167,19 @@ msgstr ""
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_order__id
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__id
 msgid "ID"
-msgstr ""
+msgstr "ID"
 
 #. module: shopifysteam
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__write_uid
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__write_uid
 msgid "Last Updated by"
-msgstr ""
+msgstr "Actualizado por"
 
 #. module: shopifysteam
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_delivery_method__write_date
 #: model:ir.model.fields,field_description:shopifysteam.field_sale_payment_method__write_date
 msgid "Last Updated on"
-msgstr ""
+msgstr "Actualizado el"
 
 #. module: shopifysteam
 #: model:sale.payment.method,name:shopifysteam.pm_pago_movil
@@ -222,12 +222,12 @@ msgstr "Pedido de venta"
 #. module: shopifysteam
 #: model_terms:ir.ui.view,arch_db:shopifysteam.view_sale_order_form_inherit
 msgid "Select delivery method..."
-msgstr "Seleccionar método de envío..."
+msgstr "Seleccionar método de envío"
 
 #. module: shopifysteam
 #: model_terms:ir.ui.view,arch_db:shopifysteam.view_sale_order_form_inherit
 msgid "Select payment method..."
-msgstr "Seleccionar método de pago..."
+msgstr "Seleccionar método de pago"
 
 #. module: shopifysteam
 #: model:sale.delivery.method,name:shopifysteam.dm_standard
@@ -255,9 +255,24 @@ msgid "Tu orden ha sido procesada y confirmada."
 msgstr ""
 
 #. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.payment_processing_page
+msgid "We’ll notify you by email once the transaction is complete."
+msgstr "Te notificaremos por correo una vez que la transacción esté completa."
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.payment_processing_page
+msgid "You can safely close this window."
+msgstr "Puede cerrar esta ventana con total seguridad."
+
+#. module: shopifysteam
+#: model_terms:ir.ui.view,arch_db:shopifysteam.payment_processing_page
+msgid "Your payment is processing"
+msgstr "Su pago está siendo procesado"
+
+#. module: shopifysteam
 #: model:sale.payment.method,name:shopifysteam.pm_zelle
 msgid "Zelle"
-msgstr "Zelle"
+msgstr ""
 
 #. module: shopifysteam
 #: model_terms:ir.ui.view,arch_db:shopifysteam.succesful_payment
