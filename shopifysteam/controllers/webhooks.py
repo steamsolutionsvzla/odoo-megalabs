@@ -26,6 +26,13 @@ class OrderFinancialStatus(Enum):
     VOIDED = 'voided'
 
 
+PAYMENT_MAPPING = {
+    'Pago Móvil': 'shopifysteam.pm_mobile_payment',
+    'Transferencia Bancaria': 'shopifysteam.pm_bank_transfer',
+    'Zelle': 'shopifysteam.pm_zelle'
+}
+
+
 class WebhookController(http.Controller):
     def _json_response(self, obj: Dict[str, Any], status: int):
         return request.make_response(json.dumps(
@@ -122,8 +129,15 @@ class WebhookController(http.Controller):
             shipping_data = data.get('shipping_lines', [])
             shipping_name = shipping_data[0].get(
                 'title') if shipping_data else 'No Shipping'
-            delivery_method = env['sale.delivery.method'].search([('name', '=', shipping_name.lower().strip())], limit=1)
+            delivery_method = env['sale.delivery.method'].search(
+                [('name', '=', shipping_name.strip().lower().replace(' ', '_'))], limit=1)
             default_dm = env.ref('shopifysteam.dm_standard').id
+            gateways = data.get('payment_gateway_names', [])
+            payment_name = gateways[0] if gateways else 'unknown'
+            target_xml_id = PAYMENT_MAPPING.get(payment_name.strip().lower().replace(
+                ' ', '_'), 'shopifysteam.pm_mobile_payment')
+            payment_method_id = env.ref(target_xml_id).id
+            default_pm = env.ref('shopifysteam.pm_mobile_payment').id
             billing_data = self._get_billing_address(env, data)
             _logger.info(billing_data)
             note_content = (
@@ -147,7 +161,7 @@ class WebhookController(http.Controller):
                 'date_order': order_date,
                 'company_id': env.company.id,
                 'delivery_method_id': delivery_method or default_dm,
-                'payment_method_id': default_pm,
+                'payment_method_id': payment_method_id or default_pm,
                 'note': note_content
             })
             shopify_status = data.get('financial_status')
@@ -297,6 +311,7 @@ class WebhookController(http.Controller):
     def _send_new_order_email(self, sale_order, custom_link):
         """Function to send email with custom link"""
         template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
+        _logger.info(custom_link)
         template.with_context(
             custom_link=custom_link,
             special_note='Su pedido será enviado en 24 horas',
