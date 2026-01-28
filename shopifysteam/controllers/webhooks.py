@@ -16,9 +16,14 @@ from odoo.tools import format_amount, format_date
 _logger = logging.getLogger(__name__)
 
 
-class OrderStatus(Enum):
-    FAILED = 'failed'
-    SUCCESS = 'success'
+class OrderFinancialStatus(Enum):
+    PENDING = 'pending'
+    AUTHORIZED = 'authorized'
+    PARTIALLY_PAID = 'partially_paid'
+    PAID = 'paid'
+    PARTIALLY_REFUNDED = 'partially_refunded'
+    REFUNDED = 'refunded'
+    VOIDED = 'voided'
 
 
 class WebhookController(http.Controller):
@@ -70,29 +75,32 @@ class WebhookController(http.Controller):
         hmac_header = request.httprequest.headers.get('X-Shopify-Hmac-Sha256')
         if not self._verify_webhook(raw_data, hmac_header):
             _logger.warning("Unauthorized Shopify webhook attempt detected.")
-            return self._json_response({'error': 'Unauthorized'}, status=401)
+            return self._json_response({'message': 'Unauthorized'}, status=401)
         try:
             data = json.loads(raw_data)
         except (json.JSONDecodeError, TypeError):
             _logger.error("Failed to decode JSON from Shopify webhook")
-            return self._json_response({'status': OrderStatus.FAILED.value, 'error': 'Invalid JSON'}, status=200)
+            return self._json_response({'message': 'Invalid JSON'}, status=200)
         if not data:
-            return self._json_response({'status': OrderStatus.FAILED.value, 'error  ': 'Empty request body'}, 200)
+            return self._json_response({'message': 'Empty request body'}, 200)
         env = request.env['res.users'].sudo().env
         if data.get('financial_status') == 'voided':
             _logger.info("Ignoring Shopify Order %s: Status is VOIDED",
                          data.get('name'))
-            return self._json_response({"status": OrderStatus.FAILED.value, "reason": "voided"}, 200)
+            return self._json_response({"reason": "voided"}, 200)
         existing_order = env['sale.order'].search([
             ('client_order_ref', '=', str(data.get('id')))
         ], limit=1)
 
         if existing_order:
-            return self._json_response({"status": OrderStatus.FAILED.value, "message": "Order already exists", "odoo_id": existing_order.id}, 200)
+            return self._json_response({"message": "Order already exists", "odoo_id": existing_order.id}, 200)
         try:
             shopify_customer = data.get('customer')
             partner_id = self._get_or_create_partner(
                 env, shopify_customer, data)
+            partner = env['res.partner'].search([
+                ('id', '=', partner_id)
+            ], limit=1)
             order_lines = []
             for item in data.get('line_items', []):
                 product_id = self._get_or_create_product(env, item)
@@ -110,7 +118,27 @@ class WebhookController(http.Controller):
             else:
                 dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 order_date = dt.astimezone(pytz.utc).replace(tzinfo=None)
-
+            default_pm = env.ref('shopifysteam.pm_mobile_payment').id
+            shipping_data = data.get('shipping_lines', [])
+            shipping_name = shipping_data[0].get(
+                'title') if shipping_data else 'No Shipping'
+            delivery_method = env['sale.delivery.method'].search([('name', '=', shipping_name.lower().strip())], limit=1)
+            default_dm = env.ref('shopifysteam.dm_standard').id
+            billing_data = self._get_billing_address(env, data)
+            _logger.info(billing_data)
+            note_content = (
+                f"--- INFORMACIÓN DE DESPACHO ---\n"
+                f"Método de Envío: {default_dm}\n"
+                f"Pasarela de Pago: {default_pm}\n\n"
+                f"--- DIRECCIÓN DE FACTURACIÓN ---\n"
+                f"{partner.name}\n"
+                f"{billing_data.get('street')}, {billing_data.get('street2') or ''}\n"
+                f"{billing_data.get('city')}, {billing_data.get('province') or ''} {billing_data.get('zip') or ''}\n"
+                f"Tel: {billing_data.get('phone') or partner.phone or 'N/A'}\n\n"
+                f"--- NOTAS ADICIONALES ---\n"
+                f"Por favor, si su pago es por transferencia o Pago Móvil, "
+                f"envíe el comprobante al correo de contacto."
+            )
             new_order = env['sale.order'].create({
                 'partner_id': partner_id,
                 'origin': data.get('name'),  # e.g. #9999
@@ -118,40 +146,85 @@ class WebhookController(http.Controller):
                 'order_line': order_lines,
                 'date_order': order_date,
                 'company_id': env.company.id,
+                'delivery_method_id': delivery_method or default_dm,
+                'payment_method_id': default_pm,
+                'note': note_content
             })
-            merchant_id = new_order.company_id.mercantil_merchant_id
-            if not merchant_id:
-                raise UserError(
-                    "Mercantil Merchant ID not configured for company %s" % new_order.company_id.name)
-            new_order.action_confirm()
-            invoice = new_order._create_invoices(final=True)
-            base_url = self.env['ir.config_parameter'].sudo(
-            ).get_param('web.base.url')
-            if invoice:
+            shopify_status = data.get('financial_status')
+
+            if shopify_status == 'paid':
+                new_order.action_confirm()
+                invoice = new_order._create_invoices(final=True)
                 invoice.action_post()
-                env.cr.commit()
-            mercantil_payment = env['sale.order.pago.mercantil'].create({
-                'order_id': new_order.id,
-                'merchant_id': new_order.company_id.mercantil_merchant_id,
-                'return_url': f"https://www.steamsolutions.tech/",
-                'invoice_number': new_order.client_order_ref or new_order.name,
-                'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
-                'invoice_cancelled_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
-                'contract_number': new_order.id,
-                'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
-                'trx_type': 'compra'
-            })
-            _logger.info(f"{mercantil_payment._build_transaction_data()}")
-            mercantil_payment = env['sale.order.pago.mercantil'].search(
-                [('order_id', '=', new_order.id)], limit=1)
-            payment_link = mercantil_payment.generate_link_payment()
-            self._send_new_order_email(new_order, payment_link)
-            return self._json_response({"status": OrderStatus.SUCCESS.value, "odoo_id": new_order.id}, 200)
+                journal = env['account.journal'].search(
+                    [('code', '=', 'BNK1')], limit=1)
+
+                if not journal:
+                    _logger.error("Bank Journal with code 'BNK1' not found!")
+                    journal = env['account.journal'].search(
+                        [('type', '=', 'bank')], limit=1)
+                payment = env['account.payment'].create({
+                    'amount': invoice.amount_total,
+                    'payment_type': 'inbound',
+                    'partner_type': 'customer',
+                    'journal_id': journal.id,
+                    'partner_id': partner_id,
+                    'ref': f"Shopify {data.get('name')}",
+                })
+                payment.action_post()
+                # (payment.move_id.line_ids + invoice.line_ids).filtered(
+                #     lambda l: l.account_id.account_type == 'asset_receivable' and not l.reconciled
+                # ).reconcile()
+                return self._json_response({"message": "Order Created and Paid"}, 200)
+            elif shopify_status in ['voided', 'refunded']:
+                new_order.action_cancel()
+                return self._json_response({"message": "Order Created and Cancelled"}, 200)
+            else:
+                new_order.action_confirm()
+                invoice = new_order._create_invoices(final=True)
+                invoice.action_post()
+                merchant_id = new_order.company_id.mercantil_merchant_id
+                if not merchant_id:
+                    _logger.error(
+                        "Mercantil Merchant ID not configured for company %s", new_order.company_id.name)
+                    return self._json_response({"message": "Merchant ID missing"}, 200)
+                mercantil_payment = env['sale.order.pago.mercantil'].create({
+                    'order_id': new_order.id,
+                    'merchant_id': merchant_id,
+                    'return_url': "https://www.steamsolutions.tech/",
+                    'invoice_number': new_order.client_order_ref or new_order.name,
+                    'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                    'invoice_cancelled_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                    'contract_number': new_order.id,
+                    'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
+                    'trx_type': 'compra'
+                })
+                payment_link = mercantil_payment.generate_link_payment()
+                self._send_new_order_email(new_order, payment_link)
+                return self._json_response({"message": "Order Draft Created, Link Sent"}, 200)
 
         except Exception as e:
             _logger.error("Shopify Sync Error: %s", str(e))
             env.cr.rollback()
-            return self._json_response({"status": OrderStatus.FAILED.value, "message": str(e)}, 500)
+            return self._json_response({"message": "error"}, 500)
+
+    def _get_billing_address(self, env, request: Dict):
+        billing = request.get("billing_address") or {}
+        country = env['res.country'].search(
+            [('code', '=', billing.get('country_code'))], limit=1)
+        state = env['res.country.state'].search([
+            ('name', '=', billing.get('province')),
+            ('country_id', '=', country.id)
+        ], limit=1) if country else None
+        return {
+            'street': billing.get('address1'),
+            'street2': billing.get('address2'),
+            'city': billing.get('city'),
+            'zip': billing.get('zip'),
+            'state_id': state.id if state else False,
+            'country_id': country.id if country else False,
+            'phone': billing.get('phone'),
+        }
 
     def _get_or_create_partner(self, env, shopify_cust, request):
         data = request.get("shipping_address")
