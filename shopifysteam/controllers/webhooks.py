@@ -40,9 +40,9 @@ class WebhookController(http.Controller):
         raw_data = request.httprequest.data
         try:
             data = json.loads(raw_data)
+            _logger.info(data)
         except (json.JSONDecodeError, TypeError):
             _logger.error("Failed to decode JSON from Shopify webhook")
-        _logger.info(data)
         return self._json_response({"message": "OK"}, 200)
 
     @http.route('/payment/success/<int:order_id>', type='http', auth='public')
