@@ -43,7 +43,7 @@ class PagoMercantil(models.Model):
         'res.currency', related='order_id.currency_id', required=True)
     payment_link = fields.Char(
         string="Payment Link", compute="_compute_payment_link")
-
+    webhook_response = fields.Json(string="Webhook Response")
     @api.depends(
         'amount', 'customer_name', 'merchant_id', 'invoice_number',
         'invoice_creation_date', 'contract_number', 'contract_date',

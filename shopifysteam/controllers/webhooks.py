@@ -8,22 +8,14 @@ from enum import Enum
 from typing import Any, Dict
 
 import pytz
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 from odoo import fields, http
 from odoo.exceptions import UserError
 from odoo.http import request
 from odoo.tools import format_amount, format_date
 
 _logger = logging.getLogger(__name__)
-
-
-class OrderFinancialStatus(Enum):
-    PENDING = 'pending'
-    AUTHORIZED = 'authorized'
-    PARTIALLY_PAID = 'partially_paid'
-    PAID = 'paid'
-    PARTIALLY_REFUNDED = 'partially_refunded'
-    REFUNDED = 'refunded'
-    VOIDED = 'voided'
 
 
 PAYMENT_MAPPING = {
@@ -47,10 +39,99 @@ class WebhookController(http.Controller):
         raw_data = request.httprequest.data
         try:
             data = json.loads(raw_data)
-            _logger.info(data)
-        except (json.JSONDecodeError, TypeError):
-            _logger.error("Failed to decode JSON from Shopify webhook")
-        return self._json_response({"message": "OK"}, 200)
+            _logger.info(f"Received encrypted webhook data: {data}")
+            encrypted_data = data.get('data')
+            if not encrypted_data:
+                _logger.error("No 'data' field found in webhook")
+                # Escribir formato de error
+                return self._json_response({}, 200)
+            secret_key = request.env['ir.config_parameter'].sudo(
+            ).get_param('pago_mercantil.secret_key')
+            if not secret_key:
+                _logger.error("Mercantil secret key not configured")
+                # Escribir formato de error
+                return self._json_response({}, 200)
+            decrypted_data = self._decrypt_mercantil_data(
+                encrypted_data, secret_key)
+            if not decrypted_data:
+                _logger.error("Failed to decrypt webhook data")
+                # Escribir formato de error
+                return self._json_response({}, 400)
+            _logger.info(f"Decrypted webhook data: {decrypted_data}")
+            # Extract webhook notification data
+            webhook_notification = decrypted_data.get(
+                'webhookNotificationIn', {})
+            info_msg = decrypted_data.get('infoMsg', {})
+            numero_factura = webhook_notification.get('numeroFactura')
+            guid = info_msg.get('guId')
+            if not numero_factura:
+                _logger.error("No numeroFactura found in decrypted data")
+                # Escribir formato de error
+                return self._json_response({}, 400)
+            PagoMercantil = request.env['sale.order.pago.mercantil'].sudo()
+            pago_record = PagoMercantil.search(
+                [('invoice_number', '=', numero_factura)], limit=1)
+
+            if not pago_record:
+                _logger.warning(f"Invoice number {numero_factura} not found")
+                return self._json_response({
+                    "status": "error",
+                    "message": "Invoice doesn't exist",
+                    "numeroFactura": numero_factura
+                }, 200)
+            if pago_record.webhook_response:
+                try:
+                    existing_data = json.loads(pago_record.webhook_response)
+                    existing_guid = existing_data.get(
+                        'infoMsg', {}).get('guId')
+                    if existing_guid == guid:
+                        _logger.info(
+                            f"Duplicate webhook detected for invoice {numero_factura}, guId: {guid}")
+                        response = self._build_mercantil_response(
+                            info_msg, 0, "06", "Notificación duplicada",
+                            "Webhook already processed", guid
+                        )
+                        return self._json_response(response, 200)
+                except json.JSONDecodeError:
+                    _logger.warning(
+                        f"Failed to decode existing webhook_response for invoice {numero_factura}")
+            invoice = request.env['account.move'].sudo().search([
+                ('ref', '=', numero_factura),
+                ('payment_state', 'not in', ['paid', 'in_payment'])
+            ], limit=1)
+            if invoice:
+                payment_register = request.env['account.payment.register'].sudo().with_context(
+                    active_model='account.move',
+                    active_ids=invoice.ids
+                ).create({
+                    'journal_id': request.env['account.journal'].sudo().search([('type', '=', 'bank')], limit=1).id,
+                })
+                payment_register.action_create_payments()
+
+                _logger.info(
+                    f"Invoice {numero_factura} marked as paid via Mercantil webhook.")
+            else:
+                _logger.error(
+                    f"Invoice {numero_factura} found in custom logs but not in account.move or already paid.")
+            pago_record.write({
+                'webhook_response': json.dumps(decrypted_data, ensure_ascii=False)
+            })
+            _logger.info(
+                f"Webhook response saved for invoice {numero_factura}")
+            response = self._build_mercantil_response(
+                info_msg, 0, "00", "aprobado", "aprobado", guid
+            )
+            _logger.info(response)
+            return self._json_response(response, 200)
+
+        except json.JSONDecodeError as e:
+            _logger.error(
+                f"Failed to decode JSON from Mercantil webhook: {str(e)}")
+            return self._json_response({"error": "Invalid JSON"}, 400)
+        except Exception as e:
+            _logger.error(
+                f"Unexpected error processing Mercantil webhook: {str(e)}")
+            return self._json_response({"error": "Internal server error"}, 500)
 
     @http.route('/payment/success/<int:order_id>', type='http', auth='public')
     def payment_success(self, order_id):
@@ -297,7 +378,8 @@ class WebhookController(http.Controller):
         """Standard Shopify HMAC verification logic"""
         if not hmac_header:
             return False
-        shopify_secret = self.env['ir.config_parameter'].sudo(
+        
+        shopify_secret = self.env['ir.config_parameter'].sudo( # pyright: ignore[reportOptionalSubscript]
         ).get_param('shopify.api_secret')
         digest = hmac.new(
             shopify_secret.encode('utf-8'),
@@ -310,7 +392,7 @@ class WebhookController(http.Controller):
 
     def _send_new_order_email(self, sale_order, custom_link):
         """Function to send email with custom link"""
-        template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
+        template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()  # pyright: ignore[reportOptionalMemberAccess]
         _logger.info(custom_link)
         template.with_context(
             custom_link=custom_link,
@@ -320,3 +402,68 @@ class WebhookController(http.Controller):
         ).sudo().send_mail(sale_order.id, force_send=True)
 
         return True
+
+    def _decrypt_mercantil_data(self, encrypted_data, secret_key):
+        """
+        Descifra datos que fueron encriptados utilizando el modo AES ECB.
+
+        Args:
+            encrypted_data (str): Cadena encriptada codificada en Base64.
+            secret_key (str): La clave secreta para el descifrado.
+
+        Returns:
+            dict: Los datos JSON descifrados como un diccionario, o None si ocurre un error.
+        """
+        try:
+            # Generar el mismo hash de clave utilizado para la encriptación
+            key_hash = hashlib.sha256(secret_key.encode('utf-8')).digest()[:16]
+
+            # Decodificar base64
+            encrypted_bytes = base64.b64decode(encrypted_data)
+
+            # Descifrar usando modo AES ECB
+            cipher = AES.new(key_hash, AES.MODE_ECB)
+            decrypted_padded = cipher.decrypt(encrypted_bytes)
+
+            # Eliminar el relleno (padding)
+            decrypted = unpad(decrypted_padded, AES.block_size)
+
+            # Convertir a JSON
+            json_str = decrypted.decode('utf-8')
+            return json.loads(json_str)
+        except Exception as e:
+            _logger.error(f"Error descifrando datos de Mercantil: {str(e)}")
+            return None
+
+    def _build_mercantil_response(self: object, info_msg: Dict, code: int, codigo: str, mensaje_cliente: str, mensaje_sistema: str, id_registro: str = ""):
+        """
+        Construye una respuesta estandarizada para el servicio de Mercantil.
+
+        Args:
+            info_msg (dict): Diccionario que contiene metadatos de la cabecera (guId, canal, etc.).
+            code (int): Código de respuesta general.
+            codigo (str): Código específico de la operación.
+            mensaje_cliente (str): Mensaje amigable destinado al usuario final.
+            mensaje_sistema (str): Detalle técnico del mensaje para fines de depuración.
+            id_registro (str, opcional): Identificador único del registro procesado.
+
+        Returns:
+            dict: Estructura de respuesta formateada según los requerimientos de Mercantil.
+        """
+        return {
+            "infoMsg": {
+                "guId": info_msg.get('guId', ''),
+                "channel": info_msg.get('channel', ''),
+                "subchannel": info_msg.get('subchannel', ''),
+                "applId": info_msg.get('applId', ''),
+                "personId": info_msg.get('personId', ''),
+                "userId": info_msg.get('userId', ''),
+                "token": info_msg.get('token', ''),
+                "action": info_msg.get('action', '')
+            },
+            "code": code,
+            "codigo": codigo,
+            "mensajeCliente": mensaje_cliente,
+            "mensajeSistema": mensaje_sistema,
+            "idRegistro": id_registro
+        }
