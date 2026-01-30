@@ -119,7 +119,7 @@ class WebhookController(http.Controller):
             _logger.info(
                 f"Webhook response saved for invoice {numero_factura}")
             response = self._build_mercantil_response(
-                info_msg, 0, "00", "aprobado", "aprobado", guid
+                info_msg, 0, "00", "Notificacion recibida con éxito!", "Notificacion recibida con éxito!!", guid
             )
             _logger.info(response)
             return self._json_response(response, 200)
