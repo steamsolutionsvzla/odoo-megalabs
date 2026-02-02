@@ -64,11 +64,11 @@ class PagoMercantil(models.Model):
     @api.depends('amount', 'webhook_response')
     def _compute_amount_ves(self):
         current_bcv_rate = self._get_latest_bcv_rate()
-        invoice = self.env['account.move'].search([
-            ('name', '=', self.invoice_number),
-            ('move_type', '=', 'out_invoice')
-        ], limit=1)
         for record in self:
+            invoice = self.env['account.move'].search([
+                ('name', '=', self.invoice_number),
+                ('move_type', '=', 'out_invoice')
+            ], limit=1)
             if record.webhook_response or invoice:
                 record.amount_ves = record.amount_ves
             elif record.amount:
