@@ -44,6 +44,29 @@ class PagoMercantil(models.Model):
     payment_link = fields.Char(
         string="Payment Link", compute="_compute_payment_link")
     webhook_response = fields.Json(string="Webhook Response")
+    amount_ves = fields.Monetary(
+        string='Amount in VES',
+        compute='_compute_amount_ves',
+        currency_field='ves_currency_id'
+    )
+    ves_currency_id = fields.Many2one(
+        'res.currency',
+        default=lambda self: self.env['res.currency'].search(
+            [('name', '=', 'VES')], limit=1)
+    )
+
+    @api.depends('amount', 'order_id')
+    def _compute_amount_ves(self):
+        for record in self:
+            latest_rate_record = self.env['steamtasabcv.exchange.rate'].search([
+                ('currency_id.name', '=', 'VES'),
+                ('name', '<=', fields.Date.today())
+            ], order='name desc', limit=1)
+            if latest_rate_record and record.amount:
+                record.amount_ves = record.amount * latest_rate_record.rate
+            else:
+                record.amount_ves = 0.0
+
     @api.depends(
         'amount', 'customer_name', 'merchant_id', 'invoice_number',
         'invoice_creation_date', 'contract_number', 'contract_date',
@@ -66,8 +89,10 @@ class PagoMercantil(models.Model):
     def _build_transaction_data(self):
         """Build dict for bank encryption"""
         self.ensure_one()
+        if not self.amount_ves or self.amount_ves <= 0:
+            raise UserError("The calculated VES amount must be greater than zero to proceed with payment.")
         return {
-            "amount": self.amount,
+            "amount": self.amount_ves,
             "customerName": self.customer_name,
             "returnUrl": self.return_url,
             "merchantId": self.merchant_id,

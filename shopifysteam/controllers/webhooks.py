@@ -264,7 +264,7 @@ class WebhookController(http.Controller):
                     'partner_type': 'customer',
                     'journal_id': journal.id,
                     'partner_id': partner_id,
-                    'ref': f"Shopify {data.get('name')}",
+                    'memo': f"Shopify {data.get('name')}",
                 })
                 payment.action_post()
                 # (payment.move_id.line_ids + invoice.line_ids).filtered(

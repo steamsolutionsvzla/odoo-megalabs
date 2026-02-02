@@ -19,6 +19,7 @@
                 <field name="order_id" />
                 <field name="merchant_id" />
                 <field name="amount" />
+                <field name="amount_ves" />
                 <field name="customer_name" />
                 <field name="invoice_number" />
                 <field name="trx_type" />
@@ -36,6 +37,7 @@
                         <field name="order_id" />
                         <field name="merchant_id" />
                         <field name="amount" />
+                        <field name="amount_ves" />
                         <field name="customer_name" />
                         <field name="trx_type" />
                         <field name="currency" />

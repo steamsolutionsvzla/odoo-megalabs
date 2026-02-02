@@ -2,7 +2,7 @@
     "name": "Pago Mercantil Steam",
     "version": "19.0.0.1",
     "category": "Sales",
-    "depends": ["base", "sale", "sale_management", "mail"],
+    "depends": ["base", "sale", "sale_management", "mail", "steamtasabcv"],
     "description": """
     Odoo module which holds a deep integration with the bank named Mercantil.""",
     "author": "Carlos",
