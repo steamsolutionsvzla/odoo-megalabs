@@ -54,16 +54,22 @@ class PagoMercantil(models.Model):
         default=lambda self: self.env['res.currency'].search(
             [('name', '=', 'VES')], limit=1)
     )
+    def _get_latest_bcv_rate(self):
+        latest_rate = self.env['steamtasabcv.exchange.rate'].search([
+            ('currency_id.name', '=', 'VES')
+        ], order='name desc', limit=1)
+        return latest_rate.rate if latest_rate else 1.0
 
-    @api.depends('amount', 'order_id')
+    @api.depends('amount', 'webhook_response')
     def _compute_amount_ves(self):
+        latest_rate_rec = self._get_latest_bcv_rate()
+        current_bcv_rate = latest_rate_rec.rate if latest_rate_rec else 1.0
+
         for record in self:
-            latest_rate_record = self.env['steamtasabcv.exchange.rate'].search([
-                ('currency_id.name', '=', 'VES'),
-                ('name', '<=', fields.Date.today())
-            ], order='name desc', limit=1)
-            if latest_rate_record and record.amount:
-                record.amount_ves = record.amount * latest_rate_record.rate
+            if record.webhook_response:
+                record.amount_ves = record.amount_ves
+            elif record.amount:
+                record.amount_ves = record.amount * current_bcv_rate
             else:
                 record.amount_ves = 0.0
 
