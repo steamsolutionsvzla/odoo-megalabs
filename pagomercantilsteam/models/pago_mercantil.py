@@ -62,8 +62,7 @@ class PagoMercantil(models.Model):
 
     @api.depends('amount', 'webhook_response')
     def _compute_amount_ves(self):
-        latest_rate_rec = self._get_latest_bcv_rate()
-        current_bcv_rate = latest_rate_rec.rate if latest_rate_rec else 1.0
+        current_bcv_rate = self._get_latest_bcv_rate()
 
         for record in self:
             if record.webhook_response:
