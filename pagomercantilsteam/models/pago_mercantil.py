@@ -54,6 +54,7 @@ class PagoMercantil(models.Model):
         default=lambda self: self.env['res.currency'].search(
             [('name', '=', 'VES')], limit=1)
     )
+
     def _get_latest_bcv_rate(self):
         latest_rate = self.env['steamtasabcv.exchange.rate'].search([
             ('currency_id.name', '=', 'VES')
@@ -63,9 +64,12 @@ class PagoMercantil(models.Model):
     @api.depends('amount', 'webhook_response')
     def _compute_amount_ves(self):
         current_bcv_rate = self._get_latest_bcv_rate()
-
+        invoice = self.env['account.move'].search([
+            ('name', '=', self.invoice_number),
+            ('move_type', '=', 'out_invoice')
+        ], limit=1)
         for record in self:
-            if record.webhook_response:
+            if record.webhook_response or invoice:
                 record.amount_ves = record.amount_ves
             elif record.amount:
                 record.amount_ves = record.amount * current_bcv_rate
@@ -95,7 +99,8 @@ class PagoMercantil(models.Model):
         """Build dict for bank encryption"""
         self.ensure_one()
         if not self.amount_ves or self.amount_ves <= 0:
-            raise UserError("The calculated VES amount must be greater than zero to proceed with payment.")
+            raise UserError(
+                "The calculated VES amount must be greater than zero to proceed with payment.")
         return {
             "amount": self.amount_ves,
             "customerName": self.customer_name,
