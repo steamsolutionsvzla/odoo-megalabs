@@ -61,12 +61,12 @@ class PagoMercantil(models.Model):
         ], order='name desc', limit=1)
         return latest_rate.rate if latest_rate else 1.0
 
-    @api.depends('amount', 'webhook_response')
+    @api.depends('amount', 'webhook_response', 'invoice_number')
     def _compute_amount_ves(self):
         current_bcv_rate = self._get_latest_bcv_rate()
         for record in self:
             invoice = self.env['account.move'].search([
-                ('name', '=', self.invoice_number),
+                ('name', '=', record.invoice_number), 
                 ('move_type', '=', 'out_invoice')
             ], limit=1)
             if record.webhook_response or invoice:
