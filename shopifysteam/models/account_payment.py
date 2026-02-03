@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import fields, models
 
 
 class AccountPayment(models.Model):
@@ -16,6 +16,12 @@ class AccountPayment(models.Model):
         readonly=True,
         store=True,
         currency_field='currency_id'
+    )
+    fixed_exchange_rate = fields.Float(
+        related='mercantil_payment.fixed_exchange_rate',
+        string='Fixed Exchange Rate',
+        readonly=True,
+        store=True,
     )
 
 

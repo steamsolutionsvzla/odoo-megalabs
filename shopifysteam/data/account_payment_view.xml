@@ -14,6 +14,10 @@
                 <div name="amount_ves_div" class="o_row">
                     <field name="amount_ves" />
                 </div>
+                <label for="fixed_exchange_rate" />
+                <div name="fixed_exchange_rate_div" class="o_row">
+                    <field name="fixed_exchange_rate" />
+                </div>
             </xpath>
         </field>
     </record>
