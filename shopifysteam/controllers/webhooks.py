@@ -286,7 +286,7 @@ class WebhookController(http.Controller):
                 mercantil_payment = env['sale.order.pago.mercantil'].create({
                     'order_id': new_order.id,
                     'merchant_id': merchant_id,
-                    'return_url': "https://www.steamsolutions.tech/",
+                    'return_url': "https://megalabs.steamsolutions.tech/payment/processing",
                     'invoice_number': new_order.client_order_ref or new_order.name,
                     'invoice_creation_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
                     'invoice_cancelled_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
