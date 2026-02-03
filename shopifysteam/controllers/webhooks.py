@@ -4,16 +4,14 @@ import hmac
 import json
 import logging
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict
 
 import pytz
+import werkzeug
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from odoo import fields, http
-from odoo.exceptions import UserError
 from odoo.http import request
-from odoo.tools import format_amount, format_date
 
 _logger = logging.getLogger(__name__)
 
@@ -120,7 +118,7 @@ class WebhookController(http.Controller):
 
                 _logger.info(
                     f"Invoice {numero_factura} marked as paid via Mercantil webhook.")
-                
+
             else:
                 _logger.error(
                     f"Invoice {numero_factura} found in custom logs but not in account.move or already paid.")
@@ -145,23 +143,40 @@ class WebhookController(http.Controller):
                 f"Unexpected error processing Mercantil webhook: {str(e)}")
             return self._json_response({"error": "Internal server error"}, 500)
 
-    @http.route('/payment/success/<int:order_id>', type='http', auth='public')
-    def payment_success(self, order_id):
+    @http.route('/payment/redirect/<int:order_id>', type='http', auth='public', csrf=False)
+    def payment_redirect(self, order_id, **kwargs):
+        """
+        Endpoint to validate order status and redirect to a freshly generated Mercantil payment link.
+        This ensures the exchange rate is always updated at the moment of the click.
+        """
         order = request.env['sale.order'].sudo().browse(order_id)
         if not order.exists():
             return request.not_found()
-        formatted_date = format_date(request.env, order.date_order)
-        formatted_total = format_amount(
-            request.env, order.amount_total, order.currency_id)
-        order_lines = [{
-            'name': line.product_id.name,
-            'qty': line.product_uom_qty,
-            'subtotal': format_amount(request.env, line.price_subtotal, order.currency_id)
-        } for line in order.order_line]
-        return request.render('shopifysteam.succesful_payment', {'object': order,
-                                                                 'formatted_date': formatted_date,
-                                                                 'formatted_total': formatted_total,
-                                                                 'order_lines': order_lines, })
+
+        invoice = order.invoice_ids.filtered(
+            lambda x: x.move_type == 'out_invoice' and x.state == 'posted'
+        )
+
+        if not invoice:
+            return request.make_response("Error: No valid invoice found for this order. Please contact support.", status=400)
+
+        if any(inv.payment_state in ['paid', 'in_payment'] for inv in invoice):
+            return request.make_response("Error: This order has already been paid.", status=400)
+
+        pago_record = request.env['sale.order.pago.mercantil'].sudo().search([
+            ('order_id', '=', order.id)
+        ], limit=1)
+
+        if not pago_record:
+            return request.make_response("Error: Payment configuration missing for this order.", status=400)
+
+        try:
+            payment_link = pago_record.generate_link_payment()
+            _logger.info(f"PAYMENT LINK{payment_link}")
+            return werkzeug.utils.redirect(payment_link, code=303)
+        except Exception as e:
+            _logger.error(f"Error generating payment link: {str(e)}")
+            return request.make_response("Error generating payment link. Please try again later.", status=500)
 
     @http.route('/v1/webhooks/shopify/orders', type='http', auth='public', methods=['POST'], csrf=False)
     def shopify_order_created(self, **kwargs):
@@ -301,8 +316,7 @@ class WebhookController(http.Controller):
                     'contract_date': new_order.date_order.date() if new_order.date_order else fields.Date.today(),
                     'trx_type': 'compra'
                 })
-                payment_link = mercantil_payment.generate_link_payment()
-                self._send_new_order_email(new_order, payment_link)
+                self._send_new_order_email(new_order, None)
                 return self._json_response({"message": "Order Draft Created, Link Sent"}, 200)
 
         except Exception as e:
@@ -385,8 +399,8 @@ class WebhookController(http.Controller):
         """Standard Shopify HMAC verification logic"""
         if not hmac_header:
             return False
-        
-        shopify_secret = self.env['ir.config_parameter'].sudo( # pyright: ignore[reportOptionalSubscript]
+
+        shopify_secret = self.env['ir.config_parameter'].sudo(  # pyright: ignore[reportOptionalSubscript]
         ).get_param('shopify.api_secret')
         digest = hmac.new(
             shopify_secret.encode('utf-8'),
@@ -397,13 +411,29 @@ class WebhookController(http.Controller):
         computed_hmac = base64.b64encode(digest).decode()
         return hmac.compare_digest(computed_hmac, hmac_header)
 
-    def _send_new_order_email(self, sale_order, custom_link):
-        """Function to send email with custom link"""
-        template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()  # pyright: ignore[reportOptionalMemberAccess]
-        _logger.info(custom_link)
+    def _send_new_order_email(self, sale_order, custom_link=None):
+        """
+        Calculates the VES total and latest rate to send in the email.
+        """
+        template = self.env.ref('shopifysteam.new_sale_order_emailv1').sudo()
+        base_url = self.env['ir.config_parameter'].sudo(
+        ).get_param('web.base.url')
+        dynamic_link = f"{base_url}/payment/redirect/{sale_order.id}"
+
+        latest_rate_record = request.env['steamtasabcv.exchange.rate'].sudo().search([
+            ('currency_id.name', '=', 'VES'),
+            ('active', '=', True)
+        ], order='name desc, id desc', limit=1)
+        current_rate = latest_rate_record.rate if latest_rate_record else 1.0
+        total_ves = sale_order.amount_total * current_rate
+        _logger.info(
+            f"Sending email for {sale_order.name} - Rate: {current_rate} - Total VES: {total_ves}")
+
         template.with_context(
-            custom_link=custom_link,
-            special_note='Su pedido será enviado en 24 horas',
+            custom_link=dynamic_link,
+            current_bcv_rate=current_rate,
+            total_in_ves=total_ves,
+            special_note='',
             tracking_number='TRK-%s' % sale_order.name,
             default_email_from="megalabs@steamsolutions.tech"
         ).sudo().send_mail(sale_order.id, force_send=True)
