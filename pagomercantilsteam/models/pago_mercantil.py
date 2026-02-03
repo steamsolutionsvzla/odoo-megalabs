@@ -54,6 +54,8 @@ class PagoMercantil(models.Model):
         default=lambda self: self.env['res.currency'].search(
             [('name', '=', 'VES')], limit=1)
     )
+    fixed_exchange_rate = fields.Float(
+        string="Fixed Exchange Rate", digits=(12, 4))
 
     def _get_latest_bcv_rate(self):
         latest_rate = self.env['steamtasabcv.exchange.rate'].search([
@@ -65,12 +67,8 @@ class PagoMercantil(models.Model):
     def _compute_amount_ves(self):
         current_bcv_rate = self._get_latest_bcv_rate()
         for record in self:
-            invoice = self.env['account.move'].search([
-                ('name', '=', record.invoice_number), 
-                ('move_type', '=', 'out_invoice')
-            ], limit=1)
-            if record.webhook_response or invoice:
-                record.amount_ves = record.amount_ves
+            if record.fixed_exchange_rate > 0:
+                record.amount_ves = record.amount * record.fixed_exchange_rate
             elif record.amount:
                 record.amount_ves = record.amount * current_bcv_rate
             else:

@@ -1,0 +1,6 @@
+[submodule "queue_job"]
+	path = queue_job
+	url = https://github.com/OCA/queue.git
+[submodule "queue"]
+	path = queue
+	url = https://github.com/OCA/queue.git

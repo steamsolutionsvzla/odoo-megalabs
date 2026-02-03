@@ -13,5 +13,7 @@
     "data": [
         "views/exchange_rate_view.xml",
         "security/ir.model.access.csv",
+        "data/currency_data.xml",
+        "data/cron_data.xml",
     ],
 }

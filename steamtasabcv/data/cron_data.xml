@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <!-- Cron 1: 11 UTC -->
+        <record id="ir_cron_bcv_morning" model="ir.cron">
+            <field name="name">BCV Fetch Morning (11 UTC)</field>
+            <field name="model_id" search="[('model', '=', 'steamtasabcv.exchange.rate')]" />
+            <field name="state">code</field>
+            <field name="code">model.cron_fetch_bcv_rate()</field>
+            <field name="user_id" ref="base.user_root" />
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <!-- Calculates tomorrow at 11:00 UTC -->
+            <field name="nextcall"
+                eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 11:00:00')" />
+            <field name="active">True</field>
+        </record>
+
+        <!-- Cron 2: 20 UTC -->
+        <record id="ir_cron_bcv_afternoon" model="ir.cron">
+            <field name="name">BCV Fetch Afternoon (20 UTC)</field>
+            <field name="model_id" search="[('model', '=', 'steamtasabcv.exchange.rate')]" />
+            <field name="state">code</field>
+            <field name="code">model.cron_fetch_bcv_rate()</field>
+            <field name="user_id" ref="base.user_root" />
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <!-- Calculates tomorrow at 20:00 UTC -->
+            <field name="nextcall"
+                eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 20:00:00')" />
+            <field name="active">True</field>
+        </record>
+
+    </data>
+</odoo>

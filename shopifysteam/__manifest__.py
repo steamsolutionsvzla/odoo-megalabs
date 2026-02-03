@@ -2,7 +2,7 @@
     "name": "Shopify Steam",
     "version": "19.0.0.1",
     "category": "Sales",
-    "depends": ["base", "sale_management", "mail", "pagomercantilsteam"],
+    "depends": ["base", "account", "sale", "sale_management", "mail", "pagomercantilsteam", "steamtasabcv"],
     "description": """
     Odoo module which holds a deep integration with the E-Commerce platform Shopify. 
     Provides webhooks to connect with the Sales module from Odoo""",
@@ -20,6 +20,7 @@
         'data/delivery_method_data.xml',
         'data/payment_method_view.xml',
         'data/payment_method_data.xml',
+        'data/account_payment_view.xml',
         'security/ir.model.access.csv', 
     ],
 }

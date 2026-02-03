@@ -6,9 +6,6 @@
         <field name="inherit_id" ref="sale.view_order_form" />
         <field name="arch" type="xml">
             <xpath expr="//field[@name='client_order_ref']" position="after">
-                <field name="payment_method_id" placeholder="Select payment method..." />
-            </xpath>
-            <xpath expr="//field[@name='client_order_ref']" position="after">
                 <field name="delivery_method_id" placeholder="Select delivery method..." />
             </xpath>
             <xpath expr="//field[@name='preferred_payment_method_line_id']" position="attributes">

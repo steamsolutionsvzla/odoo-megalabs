@@ -99,22 +99,34 @@ class WebhookController(http.Controller):
                 ('ref', '=', numero_factura),
                 ('payment_state', 'not in', ['paid', 'in_payment'])
             ], limit=1)
+            current_rate = pago_record._get_latest_bcv_rate()
             if invoice:
+                pm_method = request.env['sale.payment.method'].sudo().search([
+                    ('name', '=', 'pm_bank_transfer')
+                ], limit=1)
+                if not pm_method:
+                    pm_method = request.env['account.payment.method'].sudo().search([
+                        ('code', '=', 'manual')
+                    ], limit=1)
                 payment_register = request.env['account.payment.register'].sudo().with_context(
                     active_model='account.move',
                     active_ids=invoice.ids
                 ).create({
                     'journal_id': request.env['account.journal'].sudo().search([('type', '=', 'bank')], limit=1).id,
+                    'mercantil_payment': pago_record.id,
+                    'payment_method_id': pm_method.id if pm_method else False
                 })
                 payment_register.action_create_payments()
 
                 _logger.info(
                     f"Invoice {numero_factura} marked as paid via Mercantil webhook.")
+                
             else:
                 _logger.error(
                     f"Invoice {numero_factura} found in custom logs but not in account.move or already paid.")
             pago_record.write({
-                'webhook_response': json.dumps(decrypted_data, ensure_ascii=False)
+                'webhook_response': json.dumps(decrypted_data, ensure_ascii=False),
+                'fixed_exchange_rate': current_rate
             })
             _logger.info(
                 f"Webhook response saved for invoice {numero_factura}")
@@ -214,10 +226,6 @@ class WebhookController(http.Controller):
                 [('name', '=', shipping_name.strip().lower().replace(' ', '_'))], limit=1)
             default_dm = env.ref('shopifysteam.dm_standard').id
             gateways = data.get('payment_gateway_names', [])
-            payment_name = gateways[0] if gateways else 'unknown'
-            target_xml_id = PAYMENT_MAPPING.get(payment_name.strip().lower().replace(
-                ' ', '_'), 'shopifysteam.pm_mobile_payment')
-            payment_method_id = env.ref(target_xml_id).id
             default_pm = env.ref('shopifysteam.pm_mobile_payment').id
             billing_data = self._get_billing_address(env, data)
             _logger.info(billing_data)
@@ -242,7 +250,6 @@ class WebhookController(http.Controller):
                 'date_order': order_date,
                 'company_id': env.company.id,
                 'delivery_method_id': delivery_method or default_dm,
-                'payment_method_id': payment_method_id or default_pm,
                 'note': note_content
             })
             shopify_status = data.get('financial_status')
